@@ -1,0 +1,488 @@
+#+title: Práctica 0 (repaso de Ocaml)
+
+* Ejercicio 1
+La función mapdoble recibe como argumentos dos funciones y una lista, y devuelve una lista
+resultado de aplicar la primera función a los elementos de la lista que ocupan posición impar, y la
+segunda a los que ocupan posición par.
+Por ejemplo:
+#+begin_src ocaml
+# mapdoble (function x -> x) (function x -> -x) [1;1;1;1;1];;
+- : int list = [1; -1; 1; -1; 1]
+#+end_src
+Se pide:
+- Implemente la función mapdoble.
+- Indique el tipo de la función mapdoble.
+- Indique el valor de:
+mapdoble (function x -> x*2) (function x -> "x") [1;2;3;4;5];;
+- Indique el tipo de:
+
+** Respuesta
+Usamos una función recursiva en la que se coge el primer elemento y se le aplica la funcion 1 y se llama de nuevo a la función esta vez siendo la función 2 y la lista que queda
+#+begin_src ocaml :results code :tangle p0_1.ml
+  let rec mapdoble f1 f2 = function
+      [] -> []
+    | h::[] -> [f1 h]
+    | h::t -> f1(h)::mapdoble f2 f1 t;;
+
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+val mapdoble : ('a -> 'b) -> ('a -> 'b) -> 'a list -> 'b list = <fun>
+#+end_src
+
+#+begin_src ocaml
+Line 1, characters 44-47:
+1 | mapdoble (function x -> x*2) (function x -> "x") [1;2;3;4;5];;;;
+                                                ^^^
+Error: This expression has type string but an expression was expected of type
+         int
+#+end_src
+
+#+begin_src ocaml
+- : ('_weak1 -> int) -> '_weak1 list -> int list = <fun>
+#+end_src
+
+
+* Ejercicio 2
+  *manejar exceciones*
+- Defina una función primero_que_cumple, que dado un predicado (es decir, una función de tipo 'a -> bool) y una lista, devuelva el primer elemento de la lista que verifica dicho predicado.
+- Indique el tipo de la función primero_que_cumple.
+- Utilizando la función primero_que_cumple, defina una función existe, que dado un predicado y una lista devuelva true si en la lista hay algún elemento que verifica el predicado, y false en caso contrario.
+- Se quiere mantener un conjunto de valores etiquetados de cualquier tipo, mediante una lista de pares 'a * 'b, donde la primera componente del par es la etiqueta o clave, y la segunda es el valor asociado a esa clave en dicho conjunto. Utilizando la función primero_que_cumple, defina una función asociado : ('a * 'b) list -> 'a -> 'b, que dado un conjunto y una clave, devuelva su valor asociado.
+
+  *usar pares (funciones propias)*
+
+** Respuesta
+#+begin_src ocaml :results code :tangle p0_2.ml
+  let rec primero_que_cumple f = function
+      [] -> raise Not_found
+    | h::t -> if f(h) = true then h else primero_que_cumple f t;;
+
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+val primero_que_cumple : ('a -> bool) -> 'a list -> 'a = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_2.ml
+   let existe f l = 
+       try (let _ = primero_que_cumple in true)
+       with Not_found -> false;;
+
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+val existe : 'a -> 'b -> bool = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_2.ml
+  let asociado l a = 
+    snd(primero_que_cumple(function(a,b) -> a = a) l);;
+
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+val asociado : ('a * 'b) list -> 'c -> 'b = <fun>
+#+end_src
+
+
+* Ejercicio 3
+*recursividad*
+Se ha construido el siguiente tipo de dato con el fin de poder representar árboles binarios donde la información que aparece en cada nodo puede ser de cualquier tipo:
+#+begin_src ocaml :result code :tangle p0_3.ml
+  type 'a arbol_binario =
+      Vacio
+    | Nodo of 'a * 'a arbol_binario * 'a arbol_binario;;
+#+end_src
+
+Se pide:
+- Construya las funciones in_orden, pre_orden, post_orden y anchura, todas ellas de tipo 'a arbol_binario -> 'a list, que devuelvan los correspondientes recorridos sobre un árbol binario dado, tal y como se muestra en los siguientes ejemplos:
+
+      3
+     /  \
+   2    5
+        /  \
+      4    1
+
+#+begin_src ocaml
+let tree = Nodo(3,Nodo(2,Vacio,Vacio),Nodo(5,Nodo(4,Vacio,Vacio),Nodo(1,Vacio,Vacio)));;
+#+end_src
+
+#+begin_src ocaml
+# in_orden t;;
+- : int list = [2; 3; 4; 5; 1]
+# pre_orden t;;
+- : int list = [3; 2; 5; 4; 1]
+# post_orden t;;
+- : int list = [2; 4; 1; 5; 3]
+# anchura t;;
+- : int list = [3; 2; 5; 4; 1]
+#+end_src
+
+** Respuesta
+#+begin_src ocaml :results code :tangle p0_3.ml
+  let rec in_orden = function
+      Vacio -> []
+    | Nodo (head, left, right) -> (in_orden left) @ (head::(in_orden right));;
+
+  in_orden tree;;
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+- : int list = [2; 3; 4; 5; 1]
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_3.ml
+  let rec pre_orden = function
+      Vacio -> []
+    | Nodo (head, left, right) -> head::(pre_orden left) @ ((pre_orden right));;
+
+  pre_orden tree;;
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+- : int list = [3; 2; 5; 4; 1]
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_3.ml
+  let rec post_orden = function
+      Vacio -> []
+    | Nodo (head, left, right) -> (post_orden left) @ ((post_orden right) @ [head]);;
+
+  post_orden tree;;
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+- : int list = [2; 4; 1; 5; 3]
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_3.ml
+  let anchura tree =
+    let rec aux queue l = match queue with
+      | [] -> List.rev l
+      | Nodo(head, left, right) :: rest ->
+         let new_queue = rest @ [left; right] in
+         aux new_queue (head :: l)
+      | Vacio :: rest -> aux rest l
+    in aux [tree] [];;
+
+  anchura tree;;
+#+end_src
+
+#+RESULTS:
+#+begin_src ocaml
+- : int list = [3; 2; 5; 4; 1]
+#+end_src
+
+
+* Ejercicio 4
+*tipos de datos*
+Consideremos el siguiente tipo de dato para una representación de conjuntos basada en listas sin elementos repetidos:
+#+begin_src ocaml
+type 'a conjunto = Conjunto of 'a list;;
+#+end_src
+
+Por ejemplo, el conjunto vacío se podría representar mediante el siguiente valor:
+#+begin_src ocaml
+let conjunto_vacio = Conjunto [];;
+#+end_src
+
+Se pide implementar las siguientes funciones:
+
+- pertenece : 'a -> 'a conjunto -> bool
+- agregar : 'a -> 'a conjunto -> 'a conjunto
+- conjunto_of_list : 'a list -> 'a conjunto
+- suprimir : 'a -> 'a conjunto -> 'a conjunto
+- cardinal : 'a conjunto -> int
+- union : 'a conjunto -> 'a conjunto -> 'a conjunto
+- interseccion : 'a conjunto -> 'a conjunto -> 'a conjunto
+- diferencia : 'a conjunto -> 'a conjunto -> 'a conjunto
+- incluido : 'a conjunto -> 'a conjunto -> bool
+- igual : 'a conjunto -> 'a conjunto -> bool
+- producto_cartesiano : 'a conjunto -> 'b conjunto -> ('a * 'b) conjunto
+- list_of_conjunto : 'a conjunto -> 'a list
+
+** Respuesta
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+let c1 = Conjunto([1;2;3;4;5]);;
+let c2 = Conjunto([4;5;6;7;8]);;
+#+end_src
+
+*** pertenece
+#+begin_src ocaml
+val pertenece : 'a -> 'a conjunto -> bool = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let rec pertenece x = function
+      Conjunto [] -> false
+    | Conjunto (h::t) -> if h=x then true else pertenece x (Conjunto t);;
+
+#+end_src
+
+#+begin_src ocaml
+pertenece 1 c1;;
+#+end_src
+
+#+RESULTS:
+: true
+
+#+begin_src ocaml
+pertenece 9 c1;;
+#+end_src
+
+#+RESULTS:
+: false
+
+***  agregar
+#+begin_src ocaml
+val agregar : 'a -> 'a conjunto -> 'a conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let rec agregar x c =
+    if pertenece x c then c else match c with
+    Conjunto l -> (Conjunto (x::l));;
+
+#+end_src
+
+#+begin_src ocaml
+agrega 1 c1;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [1; 2; 3; 4; 5]
+
+#+begin_src ocaml
+agrega 9 c1;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [9; 1; 2; 3; 4; 5]
+
+*** conjunto_of_list
+#+begin_src ocaml
+val conjunto_of_list : 'a list -> 'a conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let conjunto_of_list l =
+    let rec aux (Conjunto l2) = function
+        [] -> (Conjunto l2)
+      | h::t -> aux (agregar h (Conjunto l2)) t
+    in aux (Conjunto []) l;;
+
+#+end_src
+
+#+begin_src ocaml
+conjunto_of_list [1;3;2;4;5;1;2;3;9];;
+#+end_src
+
+#+RESULTS:
+: Conjunto [9; 5; 4; 2; 3; 1]
+
+*** suprimir
+#+begin_src ocaml
+val suprimir : 'a -> 'a conjunto -> 'a conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let suprimir x (Conjunto l) =
+    let rec aux x = function
+        [] -> [] 
+      | h::t -> if h=x then t else h::(aux x t)
+    in Conjunto (aux x l);;
+
+#+end_src
+
+#+begin_src ocaml
+suprimir 3 c1;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [1; 2; 4; 5]
+
+*** cardinal
+#+begin_src ocaml
+val cardinal : 'a conjunto -> int = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let cardinal (Conjunto l) =
+    let rec aux count = function
+        [] -> count 
+      | _::t -> aux (count+1) t
+    in aux 0 l;;
+
+#+end_src
+
+#+begin_src ocaml
+cardinal c1;;
+#+end_src
+
+#+RESULTS:
+: 5
+
+*** union
+#+begin_src ocaml
+val union : 'a conjunto -> 'a conjunto -> 'a conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let union c1 (Conjunto l2) =
+    let rec aux (Conjunto l1) = function
+        [] -> l1 
+      | h::t -> if pertenece h c1 then (aux c1 t) else h::(aux (Conjunto l1) t)
+    in Conjunto (aux c1 l2);;
+
+#+end_src
+
+#+begin_src ocaml
+union c1 c2;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [6; 7; 8; 1; 2; 3; 4; 5]
+
+*** interseccion
+#+begin_src ocaml
+val interseccion : 'a conjunto -> 'a conjunto -> 'a conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let interseccion c1 (Conjunto l2) =
+    let rec aux (Conjunto l1) = function
+        [] -> [] 
+      | h::t -> if pertenece h c1 then h::(aux c1 t) else (aux (Conjunto l1) t)
+    in Conjunto (aux c1 l2);;
+
+#+end_src
+
+#+begin_src ocaml
+interseccion c1 c2;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [4; 5]
+
+*** diferencia
+#+begin_src ocaml
+val diferencia : int conjunto -> int conjunto -> int conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let diferencia (Conjunto l1) c2 =
+    let rec aux (Conjunto l2) = function
+        [] -> [] 
+      | h::t -> if pertenece h c2 then (aux c1 t) else h::(aux (Conjunto l1) t)
+    in Conjunto (aux c2 l1);;
+
+#+end_src
+
+#+begin_src ocaml
+diferencia c1 c2;;
+#+end_src
+
+#+RESULTS:
+: Conjunto [1; 2; 3]
+
+*** incluido
+#+begin_src ocaml
+val incluido : 'a conjunto -> 'a conjunto -> bool = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let rec incluido (Conjunto l1) c2 = match l1 with
+      [] -> true 
+    | h::t -> if pertenece h c2 then (incluido (Conjunto t) c2) else false;;
+
+#+end_src
+
+#+begin_src ocaml
+incluido c1 c2;;
+#+end_src
+
+#+RESULTS:
+: false
+
+#+begin_src ocaml
+incluido c1 (Conjunto [0;1;2;3;4;5;6;7;8;9]);;
+#+end_src
+
+#+RESULTS:
+: true
+
+*** igual
+#+begin_src ocaml
+val igual : int conjunto -> int conjunto -> bool = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let igual c1 c2 =
+    (diferencia c1 c2) = (diferencia c2 c1);;
+
+#+end_src
+
+#+begin_src ocaml
+igual c1 c2;;
+#+end_src
+
+#+RESULTS:
+: false
+
+#+begin_src ocaml
+igual c1 c1;;
+#+end_src
+
+#+RESULTS:
+: true
+
+*** producto_cartesiano
+#+begin_src ocaml
+val producto_cartesiano : 'a conjunto -> 'b conjunto -> ('a * 'b) conjunto = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let producto_cartesiano (Conjunto l1) (Conjunto l2)=
+    let rec aux l1 l2 laux = match l1,l2 with
+        [],_ -> []
+      | (h::t),([]) -> aux t laux laux
+      | (h1::t1), (h2::t2) -> (h1,h2)::(aux l1 t2 laux)
+    in Conjunto (aux l1 l2 l2);;
+
+#+end_src
+
+#+begin_src ocaml
+producto_cartesiano c1 c2;;
+#+end_src
+
+#+RESULTS:
+: Conjunto
+:  [(1, 4); (1, 5); (1, 6); (1, 7); (1, 8); (2, 4); (2, 5); (2, 6); (2, 7);
+:   (2, 8); (3, 4); (3, 5); (3, 6); (3, 7); (3, 8); (4, 4); (4, 5); (4, 6);
+:   (4, 7); (4, 8); (5, 4); (5, 5); (5, 6); (5, 7); (5, 8)]
+
+*** list_of_conjunto
+#+begin_src ocaml
+val list_of_conjunto : 'a conjunto -> 'a list = <fun>
+#+end_src
+
+#+begin_src ocaml :results code :tangle p0_4.ml
+  let list_of_conjunto (Conjunto l) = l;;
+
+#+end_src
+
+#+begin_src ocaml
+list_of_conjunto c1;;
+#+end_src
+
+#+RESULTS:
+| 1 | 2 | 3 | 4 | 5 |
