@@ -9,15 +9,21 @@ Por ejemplo:
 # mapdoble (function x -> x) (function x -> -x) [1;1;1;1;1];;
 - : int list = [1; -1; 1; -1; 1]
 #+end_src
+
 Se pide:
 - Implemente la función mapdoble.
 - Indique el tipo de la función mapdoble.
 - Indique el valor de:
+#+begin_src ocaml
 mapdoble (function x -> x*2) (function x -> "x") [1;2;3;4;5];;
+#+end_src
 - Indique el tipo de:
+#+begin_src ocaml
+let y = function x -> 5 in mapdoble y;;
+#+end_src
 
 ** Respuesta
-Usamos una función recursiva en la que se coge el primer elemento y se le aplica la funcion 1 y se llama de nuevo a la función esta vez siendo la función 2 y la lista que queda
+Uso una función recursiva en la que se coge el primer elemento y se le aplica la funcion 1 y se llama de nuevo a la función esta vez siendo la función 2 y la lista que queda.
 #+begin_src ocaml :results code :tangle p0_1.ml
   let rec mapdoble f1 f2 = function
       [] -> []
@@ -79,8 +85,8 @@ val existe : 'a -> 'b -> bool = <fun>
 #+end_src
 
 #+begin_src ocaml :results code :tangle p0_2.ml
-  let asociado l a = 
-    snd(primero_que_cumple(function(a,b) -> a = a) l);;
+  let asociado l key = 
+    snd(primero_que_cumple(function(a,b) -> a = key) l);;
 
 #+end_src
 
@@ -108,7 +114,7 @@ Se pide:
         /  \
       4    1
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_3.ml
 let tree = Nodo(3,Nodo(2,Vacio,Vacio),Nodo(5,Nodo(4,Vacio,Vacio),Nodo(1,Vacio,Vacio)));;
 #+end_src
 
@@ -185,7 +191,7 @@ let tree = Nodo(3,Nodo(2,Vacio,Vacio),Nodo(5,Nodo(4,Vacio,Vacio),Nodo(1,Vacio,Va
 * Ejercicio 4
 *tipos de datos*
 Consideremos el siguiente tipo de dato para una representación de conjuntos basada en listas sin elementos repetidos:
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 type 'a conjunto = Conjunto of 'a list;;
 #+end_src
 
@@ -228,21 +234,19 @@ val pertenece : 'a -> 'a conjunto -> bool = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 pertenece 1 c1;;
 #+end_src
 
 #+RESULTS:
 : true
 
-#+begin_src ocaml
-pertenece 9 c1;;
-#+end_src
+#+begin_src ocaml :tangle p0_4.ml
 
 #+RESULTS:
 : false
 
-***  agregar
+*** agregar
 #+begin_src ocaml
 val agregar : 'a -> 'a conjunto -> 'a conjunto = <fun>
 #+end_src
@@ -254,15 +258,15 @@ val agregar : 'a -> 'a conjunto -> 'a conjunto = <fun>
 
 #+end_src
 
-#+begin_src ocaml
-agrega 1 c1;;
+#+begin_src ocaml :tangle p0_4.ml
+agregar 1 c1;;
 #+end_src
 
 #+RESULTS:
 : Conjunto [1; 2; 3; 4; 5]
 
-#+begin_src ocaml
-agrega 9 c1;;
+#+begin_src ocaml :tangle p0_4.ml
+agregar 9 c1;;
 #+end_src
 
 #+RESULTS:
@@ -282,7 +286,7 @@ val conjunto_of_list : 'a list -> 'a conjunto = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 conjunto_of_list [1;3;2;4;5;1;2;3;9];;
 #+end_src
 
@@ -303,7 +307,7 @@ val suprimir : 'a -> 'a conjunto -> 'a conjunto = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 suprimir 3 c1;;
 #+end_src
 
@@ -324,7 +328,7 @@ val cardinal : 'a conjunto -> int = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 cardinal c1;;
 #+end_src
 
@@ -345,7 +349,7 @@ val union : 'a conjunto -> 'a conjunto -> 'a conjunto = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 union c1 c2;;
 #+end_src
 
@@ -366,7 +370,7 @@ val interseccion : 'a conjunto -> 'a conjunto -> 'a conjunto = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 interseccion c1 c2;;
 #+end_src
 
@@ -382,12 +386,12 @@ val diferencia : int conjunto -> int conjunto -> int conjunto = <fun>
   let diferencia (Conjunto l1) c2 =
     let rec aux (Conjunto l2) = function
         [] -> [] 
-      | h::t -> if pertenece h c2 then (aux c1 t) else h::(aux (Conjunto l1) t)
+      | h::t -> if pertenece h c2 then (aux c1 t) else h::(aux (Conjunto l2) t)
     in Conjunto (aux c2 l1);;
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 diferencia c1 c2;;
 #+end_src
 
@@ -406,14 +410,14 @@ val incluido : 'a conjunto -> 'a conjunto -> bool = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 incluido c1 c2;;
 #+end_src
 
 #+RESULTS:
 : false
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 incluido c1 (Conjunto [0;1;2;3;4;5;6;7;8;9]);;
 #+end_src
 
@@ -431,14 +435,14 @@ val igual : int conjunto -> int conjunto -> bool = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 igual c1 c2;;
 #+end_src
 
 #+RESULTS:
 : false
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 igual c1 c1;;
 #+end_src
 
@@ -460,7 +464,7 @@ val producto_cartesiano : 'a conjunto -> 'b conjunto -> ('a * 'b) conjunto = <fu
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 producto_cartesiano c1 c2;;
 #+end_src
 
@@ -480,7 +484,7 @@ val list_of_conjunto : 'a conjunto -> 'a list = <fun>
 
 #+end_src
 
-#+begin_src ocaml
+#+begin_src ocaml :tangle p0_4.ml
 list_of_conjunto c1;;
 #+end_src
 
