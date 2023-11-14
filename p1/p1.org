@@ -1,0 +1,186 @@
+#+title: Práctica 1 (autómatas finitos)
+
+* Setup
+
+#+begin_src ocaml :results code
+#load "ocaml-talf/src/talf.cma";;
+#directory "ocaml-talf/src";;
+open Conj;;
+open Auto;;
+open Ergo;;
+open Graf;;
+#+end_src
+
+ Un automata finito viene definido por la 5-tupla *AF = (Q,E,q0,d,F)* donde: 
+ |----+--------------------------+------------------|
+ | Q  | conjunto de estados      | estado conjunto  |
+ |----+--------------------------+------------------|
+ | E  | alfabeto de entrada      | simbolo conjunto |
+ |----+--------------------------+------------------|
+ | q0 | estado inicial           | estado           |
+ |----+--------------------------+------------------|
+ | d  | funcion  de transicion   | arco_af conjunto |
+ |----+--------------------------+------------------|
+ | F  | conjunto estados finales | estado conjunto  |
+ |----+--------------------------+------------------|
+
+* Ejercicio 1
+
+** es_afne : Auto.af -> bool
+Implemente una función *es_afne : Auto.af -> bool* que reciba como argumento un autómata finito, y que devuelva *true* si se trata de un autómata que presenta alguna épsilon-transición, o *false* en caso contrario.
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let afne = Af (
+      Conjunto [Estado "0"; Estado "1"; Estado "2"; Estado "3"], (*estados*)
+
+      Conjunto [Terminal "a"; Terminal "b"; Terminal "c"], (*alfabeto*)
+
+      Estado "0", (*estado inicial*)
+
+      Conjunto [Arco_af (Estado "0", Estado "1", Terminal "a"); (*funcion de transicion*)
+      Arco_af (Estado "1", Estado "1", Terminal "b");
+      Arco_af (Estado "1", Estado "2", Terminal "a");
+      Arco_af (Estado "2", Estado "0", Terminal "a");
+      Arco_af (Estado "2", Estado "3", Terminal "c")],
+
+      Conjunto [Estado "1"; Estado "3"] (*estados finales*)
+    );;
+
+#+end_src
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let es_afne (Af (estados, simbolos, e_ini, arcos, e_fin)) = 
+    let rec aux = function 
+        Conjunto [] -> false
+      | _ -> true
+    in aux (avanza (Terminal "") estados (Af (estados, simbolos, e_ini, arcos, e_fin)));;
+
+#+end_src
+
+** es_afn : Auto.af -> bool
+Implemente una función *es_afn : Auto.af -> bool* que reciba como argumento un autómata finito, y que devuelva *true* si se trata de un autómata que presenta algún tipo de no determinismo (excepto épsilon-transiciones), o *false* en caso contrario.
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let afn = Af (
+      Conjunto [Estado "0"; Estado "1"; Estado "2"; Estado "3"], (*estados*)
+
+      Conjunto [Terminal "a"; Terminal "b"; Terminal "c"], (*alfabeto*)
+
+      Estado "0", (*estado inicial*)
+
+      Conjunto [Arco_af (Estado "0", Estado "1", Terminal "a"); (*funcion de transicion*)
+      Arco_af (Estado "1", Estado "1", Terminal "b");
+      Arco_af (Estado "1", Estado "2", Terminal "a");
+      Arco_af (Estado "2", Estado "0", Terminal "a");
+      Arco_af (Estado "2", Estado "3", Terminal "a");
+      Arco_af (Estado "2", Estado "3", Terminal "c")],
+
+      Conjunto [Estado "1"; Estado "3"] (*estados finales*)
+    );;
+
+#+end_src
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  (*devuelve una lista de simbolos de las transiciones salientes del estado, 
+    un simbolo puede estar repetido si hay mas de una transicion con dicho simbolo*)
+  let get_simbols estado (Conjunto arcos) = 
+    let rec aux arcs sim = match arcs with 
+        [] -> sim
+      | (Arco_af (e, d, s))::t -> if (e=estado) then (aux t (s::sim)) else (aux t sim)
+    in aux arcos [];;
+
+#+end_src
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let es_afn (Af (Conjunto estados, simbolos, e_ini, arcos, e_fin)) =
+    let rec aux = function
+        [] -> false
+      | h::t -> let simbols = (get_simbols h arcos) in 
+                if (List.length simbols) = (cardinal (conjunto_of_list(simbols))) (*Comprobación item repetido*)
+                  then aux t
+                else
+                  true
+    in aux estados;;
+
+#+end_src
+
+** es_afd : Auto.af -> bool
+Implemente una función *es_afd : Auto.af -> bool* que reciba como argumento un autómata finito, y que devuelva *true* si se trata de un autómata totalmente determinista, o *false* en caso contrario.
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let afd = Af (
+      Conjunto [Estado "0"; Estado "1"; Estado "2"; Estado "3"], (*estados*)
+
+      Conjunto [Terminal "a"; Terminal "b"], (*alfabeto*)
+
+      Estado "0", (*estado inicial*)
+
+      Conjunto [Arco_af (Estado "0", Estado "1", Terminal "a"); (*funcion de transicion*)
+      Arco_af (Estado "0", Estado "0", Terminal "b");
+      Arco_af (Estado "1", Estado "1", Terminal "b");
+      Arco_af (Estado "1", Estado "2", Terminal "a");
+      Arco_af (Estado "2", Estado "0", Terminal "a");
+      Arco_af (Estado "3", Estado "3", Terminal "a");
+      Arco_af (Estado "3", Estado "3", Terminal "b");
+      Arco_af (Estado "2", Estado "3", Terminal "b")],
+
+      Conjunto [Estado "1"; Estado "3"] (*estados finales*)
+    );;
+
+#+end_src
+
+#+begin_src ocaml :results code :tangle p1_1.ml
+  let es_afd (Af (Conjunto estados, simbolos, e_ini, arcos, e_fin)) =
+    let rec aux estados_por_visitar estados_visitados = 
+      match estados_por_visitar with
+      | [] -> true 
+      | h::t -> 
+        let simbols = get_simbols h arcos in 
+        let simbols_no_repeated = List.length simbols = cardinal (conjunto_of_list simbols) in
+        let simbols_equal = igual (conjunto_of_list simbols) simbolos in
+        let rec aux2 simbols2 estados_por_visitar_temp estados_visitados_temp = 
+          match simbols2 with
+          | [] -> aux estados_por_visitar_temp estados_visitados_temp
+          | h1::t1 -> 
+            let destino = avanza h1 (Conjunto [h]) (Af (Conjunto estados, simbolos, e_ini, arcos, e_fin)) in
+            let destino_cardinal = cardinal destino = 1 in
+            let estadoDestino = List.hd (list_of_conjunto destino) in
+            let not_pertenece = not (pertenece estadoDestino (Conjunto estados)) in
+            let estadoDestino_not_visited = not (List.mem estadoDestino estados_visitados_temp) in
+            if not_pertenece || not destino_cardinal || not estadoDestino_not_visited then
+              false
+            else
+              aux2 t1 estados_por_visitar_temp (estadoDestino::estados_visitados_temp)
+        in
+        aux2 simbols t estados_por_visitar estados_visitados
+    in
+    aux [e_ini] [e_ini];;
+
+#+end_src
+
+* Ejercicio 2
+Implemente una función *equivalentes : Auto.af -> Auto.af -> bool* que reciba como argumentos dos autómatas finitos y que devuelva *true* cuando ambos autómatas acepten el mismo lenguaje, o *false* en caso contrario.
+
+#+begin_src ocaml :results code :tangle p1_2.ml
+  let equivalentes (af1: Af) (af2: Af) =
+    let rec aux queue visited = 
+      match queue with
+      | [] -> true
+      | (state1, state2)::t -> 
+          if List.mem (state1, state2) visited then
+            aux t visited
+          else if (pertenece state1 e_fin1 && not (pertenece state2 e_fin2)) ||
+                  (pertenece state2 e_fin2 && not (pertenece state1 e_fin1)) then
+            false 
+          else 
+            let rec aux2 symbols queue2 =
+              match symbols with
+              | [] -> aux queue2 ((state1, state2)::visited)
+              | h::t ->
+                  let next_state1 = List.hd (list_of_conjunto (avanza h (Conjunto [state1]) af1))
+                  let next_state2 = List.hd (list_of_conjunto (avanza h (Conjunto [state2]) af2))
+                  aux2 t (((next_state1, next_state2)::queue2)
+            in aux2 (list_of_conjunto simbolos1) t
+    in aux [(e_ini1, e_ini2)] [];;
+
+#+end_src
