@@ -43,6 +43,8 @@ Implemente una función *es_afne : Auto.af -> bool* que reciba como argumento un
 #+begin_src ocaml
 val es_afne : Auto.af -> bool = <fun>
 #+end_src
+- Utiliza una función auxiliar (aux) con pattern matching para verificar si hay épsilon-transiciones en los arcos del autómata.
+- Dentro de aux, invoca la función avanza con un estado terminal vacío Terminal "", y si retornara algun resultado confirmaría que sí hay épsilon-transiciones
 
 *** Ejemplo
 #+begin_src ocaml :tangle p1.ml
@@ -97,8 +99,6 @@ val es_afne : Auto.af -> bool = <fun>
 Implemente una función *es_afn : Auto.af -> bool* que reciba como argumento un autómata finito, y que devuelva *true* si se trata de un autómata que presenta algún tipo de no determinismo (excepto épsilon-transiciones), o *false* en caso contrario.
 
 #+begin_src ocaml :results code :tangle p1.ml
-  (*devuelve una lista de simbolos de las transiciones salientes del estado, 
-    un simbolo puede estar repetido si hay mas de una transicion con dicho simbolo*)
   let get_simbols estado (Conjunto arcos) = 
     let rec aux arcs sim = match arcs with 
       | [] -> sim
@@ -112,6 +112,7 @@ Implemente una función *es_afn : Auto.af -> bool* que reciba como argumento un 
 ,*           val get_simbols :
   Auto.estado -> Auto.arco_af Conj.conjunto -> Auto.simbolo list = <fun>
 #+end_src
+Toma un estado y un conjunto de arcos y devuelve una lista de símbolos de las transiciones salientes desde ese estado. Si hay varias transiciones con el mismo símbolo, este símbolo puede repetirse en la lista.
 
 #+begin_src ocaml :results code :tangle p1.ml
   let es_afn (Af (Conjunto estados, alfabeto, e_ini, arcos, e_fin)) =
@@ -131,6 +132,10 @@ Implemente una función *es_afn : Auto.af -> bool* que reciba como argumento un 
 #+begin_src ocaml
 val es_afn : Auto.af -> bool = <fun>
 #+end_src
+- Utiliza una función auxiliar (aux) con pattern matching para iterar sobre los estados del autómata.
+- En cada iteración, obtiene la lista de símbolos de las transiciones salientes desde el estado actual utilizando la función get_simbols.
+- Luego, compara la longitud de esta lista con la cardinalidad del conjunto de símbolos. Si son diferentes, significa que hay al menos un símbolo repetido en las transiciones salientes del estado actual.
+- Si encuentra algún estado con símbolos repetidos en sus transiciones salientes, devuelve true, indicando la presencia de no determinismo en el autómata. Si recorre todos los estados y no encuentra ninguno con símbolos repetidos, devuelve false.
 
 *** Ejemplo
 #+begin_src ocaml :tangle p1.ml
@@ -161,7 +166,6 @@ val es_afn : Auto.af -> bool = <fun>
 Implemente una función *es_afd : Auto.af -> bool* que reciba como argumento un autómata finito, y que devuelva *true* si se trata de un autómata totalmente determinista, o *false* en caso contrario.
 
 #+begin_src ocaml :results code :tangle p1.ml
-  (*Comprobar si el numero de arcos es igual al numero de estados por el numero de elementos en el alfabeto, comprobando tambien que sea un automata determinista*)
   let es_afd (Af (Conjunto estados, alfabeto, e_ini, arcos, e_fin)) =
     let num_estados = List.length estados in
     let num_simbolos = cardinal alfabeto in
@@ -176,6 +180,8 @@ Implemente una función *es_afd : Auto.af -> bool* que reciba como argumento un 
 #+begin_src ocaml
 val es_afd : Auto.af -> bool = <fun>
 #+end_src
+- Comprueba si el numero de arcos es igual al numero de estado por el numero de simbolos en el alfabeto
+- Usando la funcion es_afn calcula si el automata es determinista, y si cumple ambas premisas retorna true;
 
 *** Ejemplo
 #+begin_src ocaml :tangle p1.ml
@@ -207,7 +213,7 @@ val es_afd : Auto.af -> bool = <fun>
 * Ejercicio 2
 Implemente una función *equivalentes : Auto.af -> Auto.af -> bool* que reciba como argumentos dos autómatas finitos y que devuelva *true* cuando ambos autómatas acepten el mismo lenguaje, o *false* en caso contrario.
 
-#+begin_src ocaml :results code :tangle p1_2.ml
+#+begin_src ocaml :results code :tangle p1.ml
   let rec siguiente estado simbolo = function
     | [] -> estado;
     | h :: t ->
@@ -222,8 +228,9 @@ Implemente una función *equivalentes : Auto.af -> Auto.af -> bool* que reciba c
 val siguiente :
   Auto.estado -> Auto.simbolo -> Auto.arco_af list -> Auto.estado = <fun>
 #+end_src
+Toma un estado, un símbolo y una lista de arcos y devuelve el estado siguiente después de la transición con ese símbolo desde el estado dado
 
-#+begin_src ocaml :results code :tangle p1_2.ml
+#+begin_src ocaml :results code :tangle p1.ml
   let equivalentes (Af (estados1, alfabeto1, e_ini1, arcos1, e_fin1))
                    (Af (estados2, alfabeto2, e_ini2, arcos2, e_fin2)) = 
     let alfabeto = Conj.union alfabeto1 alfabeto2 in
@@ -256,6 +263,16 @@ val siguiente :
 #+begin_src ocaml
 val equivalentes : Auto.af -> Auto.af -> bool = <fun>
 #+end_src
+- Crea un conjunto de alfabeto combinado a partir de los alfabetos de los dos autómatas usando la unión de conjuntos (Conj.union).
+- Inicializa una cola (queue) para realizar un recorrido y una estructura para llevar un registro de los estados visitados (visitados).
+- Comienza el algoritmo de recorrido mientras haya elementos en la cola:
+  - Toma un par de estados actuales (uno de cada autómata) de la cola.
+  - Si el par de estados actuales ya ha sido visitado, continúa con el siguiente elemento de la cola.
+  - Verifica si hay diferencias entre la aceptación de estados finales en ambos autómatas. Si hay diferencias, devuelve false.
+  - Si no hay diferencias, procesa cada símbolo del alfabeto:
+    - Calcula el próximo estado de ambos autómatas usando la función siguiente.
+    - Agrega el par de próximos estados a la cola para su posterior procesamiento.
+- Si termina el recorrido sin encontrar diferencias en los estados finales, devuelve true.
 
 ** Ejemplo
 #+begin_src ocaml :tangle p1.ml
