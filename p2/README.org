@@ -1,0 +1,297 @@
+#+title: Práctica 2 (autómatas de pila)
+
+* Setup
+
+#+begin_src ocaml :results code :tangle p2.ml
+#load "ocaml-talf/src/talf.cma";;
+#directory "ocaml-talf/src";;
+open List;;
+open Conj;;
+open Auto;;
+open Ergo;;
+open Graf;;
+
+#+end_src
+
+** Automata de pila
+ Un automata finito viene definido por la 7-tupla *AP = (Q,E,T,q0,d,Z,F)* donde: 
+ |----+---------------------------+------------------|
+ | Q  | conjunto de estados       | estado conjunto  |
+ |----+---------------------------+------------------|
+ | E  | alfabeto de entrada       | simbolo conjunto |
+ |----+---------------------------+------------------|
+ | T  | alfabeto de la pila       | simbolo conjunto |
+ |----+---------------------------+------------------|
+ | q0 | estado inicial            | estado           |
+ |----+---------------------------+------------------|
+ | d  | funcion  de transicion    | arco_ap conjunto |
+ |----+---------------------------+------------------|
+ | Z  | simbolo de inicio de pila | simbolo          |
+ |----+---------------------------+------------------|
+ | F  | conjunto estados finales  | estado conjunto  |
+ |----+---------------------------+------------------|
+
+ Donde arco_ap esta formado por:
+ |-------------------------------+--------------|
+ | estado origen                 | estado       |
+ |-------------------------------+--------------|
+ | estado destino                | estado       |
+ |-------------------------------+--------------|
+ | simbolo terminal de entrada   | simbolo      |
+ |-------------------------------+--------------|
+ | simbolo de la cima de la pila | simbolo      |
+ |-------------------------------+--------------|
+ | cadena de simbolos de la pila | simbolo list |
+ |-------------------------------+--------------|
+
+ El simbolo especial de inicio de pila se denota *zeta*
+
+*** Ejemplo:
+#+begin_src ocaml
+  let ap1 = Ap (Conjunto [Estado "0"; Estado "1"; Estado "2"; Estado "3"], (*conjunto de estados*)
+
+      Conjunto [Terminal "a"; Terminal "b"], (*alfabeto de entrada*)
+
+      Conjunto [No_terminal ""; No_terminal "A"], (*alfabeto de la pila*)
+
+      Estado "0", (*estado inicial*)
+      
+      (*funcion de tansicion*)
+      Conjunto [Arco_ap (Estado "0", Estado "1", Terminal "a", No_terminal "",
+                         [No_terminal "A"; No_terminal ""]);
+                Arco_ap (Estado "1", Estado "1", Terminal "a", No_terminal "A",
+                         [No_terminal "A"; No_terminal "A"]);
+                Arco_ap (Estado "1", Estado "2", Terminal "b", No_terminal "A",
+                         []);
+                Arco_ap (Estado "2", Estado "2", Terminal "b", No_terminal "A",
+                         []);
+                Arco_ap (Estado "2", Estado "3", Terminal "", No_terminal "",
+                         [No_terminal ""])],
+
+      No_terminal "", (*simbolo de inico de pila*)
+
+      Conjunto [Estado "3"]);; (*estados finales*)
+
+#+end_src
+
+** Gramatica independiente del contexto
+Una gramatica independiente dle contexto esta definida por la 4-tupla *GIC(N,T,P,S)* donde:
+|---+--------------------------+--------------------|
+| N | simbolos no terminales   | simbolo conjunto   |
+|---+--------------------------+--------------------|
+| T | simbolos terminales      | simbolo conjunto   |
+|---+--------------------------+--------------------|
+| P | reglas de produccion     | regla_gic conjunto |
+|---+--------------------------+--------------------|
+| S | simbolo inicial (axioma) | simbolo            |
+|---+--------------------------+--------------------|
+donde *regla_gic* esta formado por:
+|---------+--------------|
+| entrada | simbolo      |
+|---------+--------------|
+| salida  | simbolo list |
+|---------+--------------|
+
+*** Ejemplo:
+#+begin_src ocaml
+  let gic1 = Gic (Conjunto [No_terminal "S"; No_terminal "A"; No_terminal "B"], (*simbolos no terminales*)
+
+       Conjunto [Terminal "a"; Terminal "b"; Terminal "c"], (*simbolos terminales*)
+
+       Conjunto [ (*reglas de produccion*)
+           Regla_gic (No_terminal "S", [Terminal "a"; No_terminal "A"]);
+           Regla_gic (No_terminal "A", [Terminal "a"; Terminal "b"; Terminal "c"; No_terminal "A"]);
+           Regla_gic (No_terminal "A", [Terminal "b"; No_terminal "B"]);
+           Regla_gic (No_terminal "B", [Terminal "b"; Terminal "c"; No_terminal "B"]);
+           Regla_gic (No_terminal "B", [])],
+
+       No_terminal "S");; (*simbolo inicial*)
+
+#+end_src
+
+* Ejercicio 1
+Implemente una función *ap_of_gic : Auto.gic -> Auto.ap* que reciba como argumento una gramática independiente del contexto, y que devuelva el autómata de pila correspondiente a dicha gramática.
+
+La función es relativamente simple, mapea los elementos de la gramática a el automata de pila. Tiene un par de funciones auxiliares que generan los arcos.
+No estoy seguro de que la implementación sea completamente funcional, sospecho tiene algún error que hace que algunas funciones aplicadas sobre el autómata resultante no den el resultado esperado.
+#+begin_src ocaml
+   let ap_of_gic = function
+       Gic (Conjunto n, Conjunto t, Conjunto p, No_terminal s) ->
+        let rec aux1 acum = function
+            [] -> acum
+          | Regla_gic (No_terminal x, l) :: t ->
+             aux1 ((Arco_ap (Estado "1", Estado "1", Terminal "", No_terminal x, l)) :: acum) t
+          | _ -> raise (Failure "ap_of_gic: la gramatica no es regular")
+
+        in
+        let rec aux2 acum = function
+            [] -> acum
+          | Terminal x :: t ->
+             aux2 ((Arco_ap (Estado "1", Estado "1", Terminal x, Terminal x, [])) :: acum) t;
+          | _ -> raise (Failure "ap_of_gic: la gramatica no es regular")
+        in
+        let
+          pila =
+          Arco_ap (Estado "0", Estado "1", Terminal "", No_terminal "",
+                   [No_terminal s; No_terminal ""]) ::
+          (aux1 [] p) @
+          (aux2 [] t) @
+          [Arco_ap (Estado "1", Estado "2", Terminal "", No_terminal "", [No_terminal ""])]
+        in
+        Ap (Conjunto [Estado "0"; Estado "1"; Estado "2"], (*conjunto de estados*)
+            Conjunto t,                                    (*alfabeto de entrada*)
+            Conjunto (No_terminal ""::n),                  (*alfabeto de la pila*) 
+            Estado "0",                                    (*estado inicial*)
+            Conjunto pila,                                 (*funcion de tansicion*)
+            No_terminal "",                                (*simbolo de inicio de pila*) 
+            Conjunto [Estado "2"])                         (*estados finales*)
+     | _ -> raise (Failure "ap_of_gic: el axioma de la gramatica es un terminal");;
+
+#+end_src
+
+** Ejemplo de automata y gramatica equivalente
+#+begin_src ocaml
+  let ap2 = Ap (Conjunto [Estado "0"; Estado "1"; Estado "2"], (*conjunto de estados*)
+
+      Conjunto [Terminal "a"; Terminal "b"], (*alfabeto de entrada*)
+
+      Conjunto [No_terminal ""; No_terminal "S"], (*alfabeto de la pila*)
+
+      Estado "0", (*estado inicial*)
+
+      (*funcion de transicion*)
+      Conjunto [Arco_ap (Estado "0", Estado "1", Terminal "", No_terminal "",
+                         [No_terminal "S"; No_terminal ""]);
+                Arco_ap (Estado "1", Estado "1", Terminal "a", No_terminal "a",
+                         []);
+                Arco_ap (Estado "1", Estado "1", Terminal "b", No_terminal "b",
+                         []);
+                Arco_ap (Estado "1", Estado "1", Terminal "", No_terminal "S",
+                         [No_terminal "a"; No_terminal "S"]);
+                Arco_ap (Estado "1", Estado "1", Terminal "", No_terminal "S",
+                         [No_terminal "b"; No_terminal "S"]);
+                Arco_ap (Estado "1", Estado "1", Terminal "", No_terminal "S",
+                         []);
+                Arco_ap (Estado "1", Estado "2", Terminal "", No_terminal "",
+                         [No_terminal ""])],
+
+      No_terminal "", (*simbolo de inico de pila*)
+
+      Conjunto [Estado "2"]);; (*estados finales*)
+
+#+end_src
+
+#+begin_src ocaml
+  let gic2 = Gic (Conjunto [No_terminal "S"], (*simbolos no terminales*)
+
+       Conjunto [Terminal "a"; Terminal "b"], (*simbolos terminales*)
+
+       Conjunto [ (*reglas de produccion*)
+           Regla_gic (No_terminal "S", [Terminal "a"; No_terminal "S"]);
+           Regla_gic (No_terminal "S", [Terminal "b"; No_terminal "S"]);
+           Regla_gic (No_terminal "S", [])],
+
+       No_terminal "S");; (*simbolo inicial*)
+
+  ap_of_gic gic2;;
+
+#+end_src
+
+
+* Ejercicio 2
+Sobre un autómata de pila resultante y ante una cadena de entrada, implementar una función para que además proporcione el conjunto de reglas activadas al procesar dicha cadena.
+
+** Funciones auxiliares de escaner
+Estas funciones fueron obtenidas de la librería *ocaml-latf*
+#+begin_src ocaml
+  exception No_encaja;;
+
+  let encaja (estado, cadena, pila_conf) (Arco_ap (origen, destino, entrada, cima, pila_arco)) =
+    let
+      nuevo_estado =
+      if estado = origen then (*Arco tiene el origen adecuado*)
+        destino
+      else
+        raise No_encaja
+    and
+      nueva_cadena =
+      if entrada = Terminal "" then (*entrada es epsilon*)
+        cadena
+      else
+        if (cadena <> []) && (entrada = hd cadena) then (*entrada coincide con cadena*)
+          tl cadena
+        else
+          raise No_encaja
+    and
+      nueva_pila_conf =
+      if cima = Terminal "" then (*cima del arco es espsilon*)
+        pila_arco @ pila_conf
+      else
+        if (pila_conf <> []) && (cima = hd pila_conf) then (*cima del arco coincide con pila*)
+          pila_arco @ (tl pila_conf)
+        else
+          raise No_encaja
+    in
+    (nuevo_estado, nueva_cadena, nueva_pila_conf) ;;
+
+#+end_src
+
+#+begin_src ocaml
+  let es_conf_final finales = function
+      (estado, [], _) -> pertenece estado finales (*estado es final y cadena vacia*)
+    | _ -> false;;
+  
+#+end_src
+
+** escaner_ap
+La funcion retornará todos los arcos que encajen durante el escaner. Esto significa que también retornará arcos que no llevan al resultado true pero que se recorren durante el escaner. 
+#+begin_src ocaml
+  let escaner_ap_reglas cadena (Ap (_, _, _, inicial, Conjunto delta, zeta, finales)) =
+    let rec aux = function
+        ([], [], _, reglas_activadas) -> (false, rev reglas_activadas)
+      | ([], l, _, reglas_activadas) -> aux (l, [], delta, reglas_activadas)
+      | (_::cfs, l, [], reglas_activadas) -> aux (cfs, l, delta, reglas_activadas)
+      | (cf::cfs, l, a::arcos, reglas_activadas) ->
+         try
+           let
+             ncf = encaja cf a
+           in
+           if es_conf_final finales ncf then
+             (true, rev (a :: reglas_activadas))
+           else
+             aux (cf::cfs, ncf::l, arcos, a::reglas_activadas)
+         with
+           No_encaja -> aux (cf::cfs, l, arcos, reglas_activadas)
+    in
+    aux ([(inicial, cadena, [zeta])], [], delta, []) ;;
+
+#+end_src
+
+Esta función además de los arcos retorna la configuración que que encaja con dicho arco, lo que es util para entender un poco mejor porqué, como expliqué en la anterior función, también se retornan arcos que no son parte del camino de procesamiento final. 
+#+begin_src ocaml
+  let escaner_ap_test cadena (Ap (_, _, _, inicial, Conjunto delta, zeta, finales)) =
+    let rec aux = function
+        ([], [], _, reglas_activadas) -> (false, rev reglas_activadas)
+      | ([], l, _, reglas_activadas) -> aux (l, [], delta, reglas_activadas)
+      | (_::cfs, l, [], reglas_activadas) -> aux (cfs, l, delta, reglas_activadas)
+      | (cf::cfs, l, a::arcos, reglas_activadas) ->
+         try
+           let
+             ncf = encaja cf a
+           in
+           if es_conf_final finales ncf then
+             (true, rev ((cf, a):: reglas_activadas))
+           else
+             aux (cf::cfs, ncf::l, arcos, (cf, a)::reglas_activadas)
+         with
+           No_encaja -> aux (cf::cfs, l, arcos, reglas_activadas)
+    in
+    aux ([(inicial, cadena, [zeta])], [], delta, []) ;;
+
+#+end_src
+
+** Ejemplo de uso
+#+begin_src ocaml
+  escaner_ap_reglas (cadena_of_string "a") ap;;
+#+end_src
+
