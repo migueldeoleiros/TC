@@ -1,0 +1,2 @@
+#+title: Prácticas de Teoría de la Computación
+Grado en Ingeniería Informática - 2023/24
