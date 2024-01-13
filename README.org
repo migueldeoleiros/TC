@@ -1,2 +1,6 @@
 #+title: Prácticas de Teoría de la Computación
 Grado en Ingeniería Informática - 2023/24
+
+Este repositorio cuenta con tres prácticas, cada una de ellas con un README en org-mode que trae una explicación algo más detallada con ejemplos.
+
+La librería ocaml-talf está también incluida para poder ejecutar y entender la p1 y p2. Esta librería nos fue proporcionada, y no poseo autoría de ella.
